@@ -1,5 +1,5 @@
 # Установка 3x-ui + VLESS Reality на Ubuntu-сервер
-
+source: https://github.com/ServerTechnologies/3x-ui-with-xhttp
 Инструкция описывает установку **3x-ui** на Ubuntu VPS, создание подключения **VLESS + Reality + TCP + Vision** и подключение клиентов на Windows и Android.
 
 Подходит для сценария, когда на сервере уже могут быть другие службы, например **AmneziaWG**. Главное — не пересекаться по портам и не сбрасывать firewall.
