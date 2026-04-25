@@ -1,5 +1,3 @@
-# vless-3xui
-source: https://github.com/ServerTechnologies/3x-ui-with-xhttp
 # Установка 3x-ui + VLESS Reality на Ubuntu-сервер
 
 Инструкция описывает установку **3x-ui** на Ubuntu VPS, создание подключения **VLESS + Reality + TCP + Vision** и подключение клиентов на Windows и Android.
@@ -538,17 +536,37 @@ ss -tulpn | grep -E '443|17701|80'
 
 ## 12. Удаление 3x-ui
 
-Обычно достаточно:
+Так как 3x-ui установлен как `systemd`-служба, удаление обычно простое. Перед удалением полезно посмотреть текущие порты, чтобы случайно не трогать чужие службы, например AmneziaWG:
+
+```bash
+ss -tulpn
+ufw status numbered
+```
+
+### Вариант 1: штатное удаление
+
+Обычно достаточно встроенной команды:
 
 ```bash
 x-ui uninstall
 ```
 
-Если нужно вручную подчистить:
+После этого проверь, что служба исчезла или остановлена:
 
 ```bash
-systemctl stop x-ui
-systemctl disable x-ui
+systemctl status x-ui --no-pager
+ss -tulpn | grep -E '443|17701|xray|x-ui'
+```
+
+Если `x-ui` не найден, а `443/tcp` и порт панели больше не слушаются `xray` / `x-ui`, значит удаление прошло нормально.
+
+### Вариант 2: ручная очистка
+
+Если штатная команда не сработала или нужно подчистить вручную:
+
+```bash
+systemctl stop x-ui || true
+systemctl disable x-ui || true
 rm -f /etc/systemd/system/x-ui.service
 systemctl daemon-reload
 systemctl reset-failed
@@ -557,29 +575,35 @@ rm -rf /etc/x-ui
 rm -rf /root/cert/ip
 ```
 
-Если использовался сертификат Let's Encrypt по IP:
+Если использовался Let's Encrypt-сертификат по IP, можно удалить сертификат из `acme.sh`. Замени `IP_СЕРВЕРА` на реальный IP:
 
 ```bash
-~/.acme.sh/acme.sh --remove -d IP_СЕРВЕРА --ecc
+~/.acme.sh/acme.sh --remove -d IP_СЕРВЕРА --ecc || true
 rm -rf ~/.acme.sh/IP_СЕРВЕРА_ecc
 ```
 
-Закрыть порты, если они больше не нужны:
+### Закрытие портов
+
+Закрывай только те порты, которые точно использовались 3x-ui и больше не нужны. Например, если порт панели был `17701`:
 
 ```bash
 ufw delete allow 17701/tcp
 ufw delete allow 443/tcp
 ufw delete allow 80/tcp
+ufw status
 ```
 
-`22/tcp` не удалять, если через него работает SSH.
+Важно: `22/tcp` не удалять, если через него работает SSH. Если на сервере стоит AmneziaWG, не удаляй его UDP-порты, например `51820/udp` или `443/udp`.
 
-Проверить, что всё удалено:
+Финальная проверка:
 
 ```bash
 systemctl status x-ui --no-pager
 ss -tulpn | grep -E '443|17701|xray|x-ui'
+ufw status numbered
 ```
+
+Если команды по `x-ui` показывают, что службы нет, а `ss` ничего не выводит по `xray/x-ui`, 3x-ui удалён.
 
 ---
 
@@ -610,3 +634,4 @@ laptop
 phone
 tablet
 ```
+
