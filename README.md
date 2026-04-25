@@ -635,6 +635,8 @@ phone
 tablet
 ```
 
-<img width="511" height="1380" alt="image" src="https://github.com/user-attachments/assets/cfcec87a-f239-485c-88d1-9ca9d0cce35f" />
-<img width="507" height="1191" alt="image" src="https://github.com/user-attachments/assets/7a094ba5-4766-48b7-83b1-2eaaad6fc814" />
+<img width="520" height="1383" alt="image" src="https://github.com/user-attachments/assets/4899f6f4-e8e1-4ac4-ab01-74794677e9da" />
+<img width="525" height="1201" alt="image" src="https://github.com/user-attachments/assets/b2945fbf-2dab-436d-a445-2787e41b4a2f" />
+
+
 
