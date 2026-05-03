@@ -1,15 +1,15 @@
 # Установка 3x-ui + VLESS Reality + XHTTP на Ubuntu-сервер
 
-Инструкция описывает установку **3x-ui** и создание подключения **VLESS + Reality + XHTTP** — именно того подхода, который описан в репозитории `ServerTechnologies/3x-ui-with-xhttp`.
+Инструкция описывает установку **3x-ui** и создание подключения **VLESS + Reality + XHTTP** — именно подхода из репозитория `ServerTechnologies/3x-ui-with-xhttp`.
 
-Отличие от нашего уже рабочего варианта:
+Отличие от варианта `TCP RAW + Vision`:
 
 ```text
-наш рабочий вариант: VLESS + Reality + TCP RAW + Vision
-вариант из репозитория: VLESS + Reality + XHTTP
+TCP RAW + Vision: VLESS + Reality + TCP RAW + Flow xtls-rprx-vision
+XHTTP:            VLESS + Reality + XHTTP, Flow пустой
 ```
 
-База одинаковая: **3x-ui + Xray-core + VLESS + Reality**. Отличается транспорт: вместо `TCP (RAW)` выбирается `XHTTP`.
+База одинаковая: **3x-ui + Xray-core + VLESS + Reality**. Отличается транспорт.
 
 ---
 
@@ -22,8 +22,8 @@ Ubuntu VPS
 → 3x-ui как systemd-служба
 → Xray-core внутри 3x-ui
 → VLESS + Reality + XHTTP
-→ порт VLESS: 443/tcp
-→ порт панели: случайный или свой, например 17701/tcp
+→ порт VLESS/XHTTP: 443/tcp
+→ порт панели 3x-ui: лучше задать вручную, например 58666/tcp
 → порт Let's Encrypt / ACME: 80/tcp
 ```
 
@@ -38,34 +38,40 @@ iOS / macOS arm64: Streisand
 Если на сервере уже есть AmneziaWG, нормальная совместная схема:
 
 ```text
-AmneziaWG: 51820/udp или 443/udp
-3x-ui panel: 17701/tcp
+AmneziaWG VPN:       51820/udp
+AmneziaWG panel:     51821/tcp
+3x-ui panel:         58666/tcp или другой выбранный порт
 VLESS Reality XHTTP: 443/tcp
 ACME / Let's Encrypt: 80/tcp
-SSH: 22/tcp
+SSH:                 22/tcp
 ```
 
-Конфликт будет только если другая служба уже использует тот же самый **TCP-порт**, например `443/tcp`.
+Конфликт будет только если другая служба уже использует тот же самый порт и протокол, например `443/tcp`.
 
 ---
 
-## 1. Команды на сервере
+## 1. Проверить текущие порты
 
-Подключиться к серверу:
-
-```bash
-ssh root@IP_СЕРВЕРА
-```
-
-Проверить, какие порты уже заняты:
+Перед установкой полезно посмотреть, что уже работает на сервере:
 
 ```bash
 ss -tulpn
 ufw status numbered || true
+docker ps || true
 ```
 
+Если стоит AmneziaWG через Docker, обычно будет что-то вроде:
 
-## 1. Минимальная установка
+```text
+51820/udp — AmneziaWG VPN
+51821/tcp — панель amnezia-wg-easy
+```
+
+Их не трогаем.
+
+---
+
+## 2. Минимальная установка
 
 Минимально для установки 3x-ui обычно достаточно:
 
@@ -78,7 +84,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.
 
 ---
 
-## 2. Желательная подготовка
+## 3. Желательная подготовка
 
 Эта команда **желательна, но не всегда обязательна**: установочный скрипт 3x-ui обычно сам доставляет часть зависимостей. Но лучше выполнить её заранее, чтобы точно были `curl`, `openssl`, `socat`, `cron`, `ca-certificates` и `ufw`.
 
@@ -91,9 +97,11 @@ DEBIAN_FRONTEND=noninteractive apt install -y curl wget sudo ufw nano openssl ca
 
 ## ⚠️ Необязательный аварийный блок
 
+**Этот блок НЕ является обязательным для установки 3x-ui.**
+
 **НЕ НУЖНО делать полный `apt upgrade -y` на рабочем сервере без необходимости.** Особенно если на сервере уже есть SSH-настройки, AmneziaWG или другие службы. `apt upgrade` может задавать вопросы по конфигам вроде `/etc/ssh/sshd_config` или `/etc/cloud/cloud.cfg`.
 
-Команды ниже выполнять **только если есть проблема с apt/dpkg**: например, `dpkg was interrupted`, broken dependencies, зависшее/прерванное обновление.
+Команды ниже выполнять **только если есть проблема с apt/dpkg**: например, `dpkg was interrupted`, broken dependencies, зависшее или прерванное обновление.
 
 ```bash
 dpkg --configure -a
@@ -106,120 +114,222 @@ apt install -f -y
 apt upgrade -y
 ```
 
+---
+
+## 4. Порт панели: вручную или случайный
+
+Есть два варианта.
+
+### Вариант A — рекомендованный: задать порт панели вручную
+
+Проще и понятнее заранее выбрать порт панели, например:
+
+```text
+58666
+```
+
+Плюсы:
+
+```text
+1. заранее понятно, какой порт открывать в UFW;
+2. проще записать URL панели;
+3. меньше риска забыть открыть случайный порт;
+4. меньше путаницы при повторной установке.
+```
+
 Во время установки:
 
 ```text
 Would you like to customize the Panel Port settings? [y/n]: y
+Please set up the panel port: 58666
 ```
 
-Если скрипт сам сгенерирует случайный порт панели — это нормально. Сохраните его.
-
-На выборе SSL-сертификата в новых версиях 3x-ui лучше выбрать Let's Encrypt по IP:
+Важно: если выбрал `y`, на втором вопросе **нельзя просто нажимать Enter**. Нужно ввести число. Иначе будет ошибка вроде:
 
 ```text
-1. Let's Encrypt for Domain
-2. Let's Encrypt for IP Address
-3. Custom SSL Certificate
-
-Choose an option: 2
+invalid value "" for flag -port
+Access URL: https://IP:/WEBBASEPATH
 ```
 
-На вопрос про IPv6:
+### Вариант B — случайный порт
+
+Если хочешь, чтобы скрипт сам сгенерировал порт:
 
 ```text
-Do you have an IPv6 address to include?:
+Would you like to customize the Panel Port settings? [y/n]: n
 ```
 
-Нажать **Enter**, если IPv6 не нужен.
-
-На вопрос про порт ACME:
+Тогда в конце установки смотри строку:
 
 ```text
-Port to use for ACME HTTP-01 listener (default 80):
+Port: 60870
+Access URL: https://IP:60870/WEBBASEPATH
 ```
 
-Нажать **Enter**, чтобы оставить `80`.
+Если UFW активен, этот сгенерированный порт нужно открыть уже после установки:
 
-После установки скрипт покажет примерно такие данные:
-
-```text
-Username: ...
-Password: ...
-Port: ...
-WebBasePath: ...
-Access URL: https://IP_СЕРВЕРА:PORT/WEBBASEPATH
+```bash
+ufw allow 60870/tcp
+ufw status
 ```
-
-Их нужно сохранить.
 
 ---
 
-## 2. Открыть порты / firewall
+## 5. Firewall / UFW
 
-Если `ufw status` показывает `inactive`, то панель может открываться и без этих команд: firewall Ubuntu просто не фильтрует входящие подключения. То есть для работы 3x-ui это **не всегда обязательно**.
+Если `ufw status` показывает `inactive`, панель может открываться и без `ufw allow`: firewall Ubuntu просто ничего не фильтрует. Но если UFW уже активен, нужно явно открыть нужные порты.
 
-Но для безопасности лучше включить UFW и явно разрешить только нужные порты. Замените `17701` на фактический порт панели из вывода установки, например `58666`.
+### Если заранее выбрал порт панели 58666
+
+Для чистого сервера:
 
 ```bash
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw allow 17701/tcp
-ufw status numbered
+ufw allow 58666/tcp
+ufw status
 ```
 
-После этого UFW можно включить:
+Если на сервере уже есть AmneziaWG:
+
+```bash
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 58666/tcp
+ufw allow 51820/udp
+ufw allow 51821/tcp
+ufw status
+```
+
+Если UFW выключен и хочешь его включить:
 
 ```bash
 ufw --force enable
 ufw status verbose
 ```
 
-Почему `--force`: иногда интерактивное `ufw enable` в SSH-сессии отвечает `Aborted`, даже если вводить `y`. `--force` включает UFW без вопроса.
+`--force` полезен, потому что обычный `ufw enable` в SSH-сессии иногда отвечает `Aborted`.
 
-Если SSH работает не на `22`, сначала откройте свой SSH-порт, иначе можно потерять доступ к серверу.
+### Зачем нужен 80/tcp
 
-Если на сервере уже стоит AmneziaWG, **не выполняйте `ufw reset` и не удаляйте существующие правила**. Обычно AmneziaWG использует UDP-порт, например `51820/udp` или `443/udp`, а VLESS/XHTTP использует `443/tcp`, поэтому они не конфликтуют.
+`80/tcp` нужен только для выпуска/автообновления сертификата панели через Let's Encrypt.
 
-Если используете subscription-ссылки 3x-ui, может понадобиться порт подписки, например `2096/tcp`:
+Если `80/tcp` закрыт, установка с вариантом **2 — Let's Encrypt for IP Address** может упасть с ошибкой:
+
+```text
+Timeout during connect (likely firewall problem)
+Please ensure port 80 is reachable
+```
+
+В таком случае открой `80/tcp` и повтори установку/выпуск сертификата.
+
+### Зачем нужен 2096/tcp
+
+3x-ui может поднять subscription server на `2096/tcp`. Если используешь обычную `vless://` ссылку или QR, `2096/tcp` обычно не нужен. Если будешь использовать subscription-ссылки 3x-ui, открой:
 
 ```bash
 ufw allow 2096/tcp
 ```
 
-Если обычная `vless://` ссылка/QR копируется напрямую, `2096/tcp` обычно не нужен.
+---
+
+## 6. Установка 3x-ui
+
+Запуск установщика:
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
+```
+
+Рекомендуемый вариант с фиксированным портом панели:
+
+```text
+Would you like to customize the Panel Port settings? [y/n]: y
+Please set up the panel port: 58666
+```
+
+SSL-сертификат для панели:
+
+```text
+1. Let's Encrypt for Domain
+2. Let's Encrypt for IP Address
+3. Custom SSL Certificate
+```
+
+Если `80/tcp` открыт, выбирай:
+
+```text
+2
+```
+
+На IPv6:
+
+```text
+Do you have an IPv6 address to include? (leave empty to skip):
+```
+
+Если IPv6 не нужен, просто Enter.
+
+На ACME listener:
+
+```text
+Port to use for ACME HTTP-01 listener (default 80):
+```
+
+Просто Enter, чтобы оставить `80`.
+
+После установки сохрани:
+
+```text
+Username
+Password
+Port
+WebBasePath
+Access URL
+```
+
+Пример:
+
+```text
+Access URL: https://31.59.114.59:58666/WEBBASEPATH
+```
+
+Если логин/пароль где-то засветились, после входа в панель лучше сразу поменять пароль и WebBasePath.
 
 ---
 
-## 3. Проверить работу 3x-ui
+## 7. Проверить работу 3x-ui
 
 ```bash
 x-ui status
 systemctl status x-ui --no-pager
 ```
 
-Посмотреть настройки панели, если забыли URL, логин, порт или base path:
+Проверить, что панель слушает свой порт:
+
+```bash
+ss -tulpn | grep -E '58666|60870|2053|2096|443'
+```
+
+Посмотреть настройки панели:
 
 ```bash
 x-ui settings
 ```
 
-Перезапуск 3x-ui:
-
-```bash
-x-ui restart
-```
-
 Логи:
 
 ```bash
-x-ui log
 journalctl -u x-ui -n 100 --no-pager
 ```
 
+Если запустил `x-ui log`, там надо выбирать пункты меню цифрами `1`, `2`, `0`. Команду `journalctl ...` нужно запускать в обычной консоли, не внутри меню `x-ui log`.
+
 ---
 
-## 4. Зайти в панель
+## 8. Зайти в панель
 
 Открыть в браузере:
 
@@ -227,23 +337,15 @@ journalctl -u x-ui -n 100 --no-pager
 https://IP_СЕРВЕРА:PORT/WEBBASEPATH
 ```
 
-Пример:
+Например:
 
 ```text
-https://45.38.23.54:17701/aqxVQON0xFQ5lE9P9w
-```
-
-После первого входа желательно сразу поменять:
-
-```text
-username
-password
-WebBasePath
+https://31.59.114.59:58666/WEBBASEPATH
 ```
 
 ---
 
-## 5. Создать VLESS Reality XHTTP inbound без CDN
+## 9. Создать VLESS Reality XHTTP inbound без CDN
 
 В панели:
 
@@ -258,18 +360,6 @@ Remark / Примечание: vless-reality-xhttp-main
 Protocol / Протокол: vless
 Listen IP / Мониторинг IP: оставить пустым
 Port / Порт: 443
-Total Traffic / Общий расход: 0
-Reset Traffic / Сброс трафика: Never / Никогда
-Expiry Time / Дата окончания: не задавать
-```
-
-Блок клиента:
-
-```text
-Email / Name: laptop
-UUID / ID: Generate / сгенерировать
-Flow: Пусто / empty
-Total Traffic / Общий расход: 0
 Expiry Time / Дата окончания: не задавать
 Enable / Включить: ON
 Authentication: None / пусто
@@ -277,9 +367,9 @@ Encryption: none
 Decryption: none
 ```
 
-Важно: для XHTTP не ставим `xtls-rprx-vision`. Это было нужно для TCP RAW + Vision. Для XHTTP поле `Flow` лучше оставить пустым.
+Для XHTTP **не ставим** `xtls-rprx-vision`. Это было нужно для `TCP RAW + Vision`. Для XHTTP поле `Flow` оставляем пустым.
 
-Блок транспорта для простого XHTTP без CDN:
+Блок транспорта:
 
 ```text
 Transmission / Транспорт: XHTTP
@@ -299,7 +389,7 @@ QUIC Params: OFF
 External Proxy: OFF
 ```
 
-`Host` пустой — это нормально для простого варианта без CDN. `Path: /` тоже нормально. Расширенные XHTTP-поля в разных версиях 3x-ui могут выглядеть немного по-разному; если сомневаетесь, оставляйте дефолтные значения как выше.
+`Host` пустой — это нормально для простого варианта без CDN. `Path: /` тоже нормально. Если часть расширенных XHTTP-полей отсутствует в твоей версии 3x-ui, оставляй дефолты.
 
 Блок безопасности:
 
@@ -321,7 +411,7 @@ SpiderX: /
 Short IDs: fe4fbaaf65eacb35
 ```
 
-`Target` и `SNI` должны совпадать по домену. Можно использовать и другой доступный HTTPS-сайт, например:
+`Target` и `SNI` должны совпадать по домену. Можно использовать другой доступный HTTPS-сайт, например:
 
 ```text
 www.apple.com:443
@@ -330,8 +420,6 @@ www.apple.com
 www.nvidia.com:443
 www.nvidia.com
 ```
-
-После `Get New Cert` и `Get New Seed` **не меняйте** `Target`, `SNI`, `Short IDs`, `Public Key`, `Private Key`, `mldsa65 Seed` и `mldsa65 Verify` без повторного экспорта новой ссылки в клиент. Если эти поля поменять, старая ссылка в v2rayN/v2rayNG станет неактуальной.
 
 Нажать:
 
@@ -359,7 +447,7 @@ mldsa65 Seed
 mldsa65 Verify
 ```
 
-Для варианта из репозитория нажимаем `Get New Seed`. Если какой-то клиент плохо импортирует ссылку или не поддерживает ML-DSA/seed, можно попробовать вариант без `mldsa65 Seed / Verify`, но сначала лучше следовать репозиторию буквально.
+Для варианта из репозитория нажимаем `Get New Seed`. Если какой-то клиент плохо импортирует ссылку или не поддерживает ML-DSA/seed, можно потом тестировать без `mldsa65 Seed / Verify`, но сначала лучше следовать репозиторию.
 
 Sniffing:
 
@@ -378,34 +466,25 @@ Route Only: OFF
 Create / Создать
 ```
 
+После `Get New Cert` и `Get New Seed` **не меняй** `Target`, `SNI`, `Short IDs`, `Public Key`, `Private Key`, `mldsa65 Seed` и `mldsa65 Verify` без повторного экспорта новой ссылки в клиент. Если эти поля поменять, старая ссылка в v2rayN/v2rayNG станет неактуальной.
+
 ---
 
-## 6. Проверить, что Xray слушает порт 443
-
-После создания inbound на сервере:
+## 10. Проверить, что Xray слушает 443
 
 ```bash
 ss -tulpn | grep 443
 ```
 
-Нормальный результат должен быть примерно такой:
+Нормально, если увидишь примерно:
 
 ```text
 tcp LISTEN 0 4096 *:443 *:* users:(("xray-linux-amd64",pid=...,fd=...))
 ```
 
-Если порт `443` слушает `xray`, значит inbound поднялся.
-
-Логи при проблемах:
-
-```bash
-x-ui log
-journalctl -u x-ui -n 100 --no-pager
-```
-
 ---
 
-## 7. Создать отдельного клиента для телефона
+## 11. Создать отдельного клиента для телефона
 
 Один QR можно использовать и на ПК, и на телефоне, но лучше делать отдельного клиента на каждое устройство.
 
@@ -427,9 +506,7 @@ Expiry Time: не задавать
 Enable: ON
 ```
 
-Сохранить.
-
-Итоговая структура:
+Итог:
 
 ```text
 1 inbound XHTTP на 443
@@ -439,13 +516,11 @@ client phone  → отдельная ссылка/QR
 
 ---
 
-## 8. Где взять QR или ссылку
+## 12. Где взять QR или ссылку
 
 В списке Inbounds нажать маленький `+` слева от строки inbound. Раскроется список клиентов.
 
-У конкретного клиента можно открыть QR или скопировать ссылку.
-
-Если нажать на QR, в некоторых версиях 3x-ui ссылка просто копируется в буфер обмена. Это нормально.
+У конкретного клиента можно открыть QR или скопировать ссылку. Если нажать на QR, в некоторых версиях 3x-ui ссылка просто копируется в буфер обмена. Это нормально.
 
 Ссылка начинается так:
 
@@ -460,16 +535,16 @@ type=xhttp
 security=reality
 pbk=...
 fp=chrome
-sni=www.apple.com
+sni=www.sony.com
 sid=fe4fbaaf65eacb35
 spx=%2F
 ```
 
-Если после любых изменений нажимали `Get New Cert`, меняли `Short IDs`, `SNI`, `Target` или `Seed`, нужно заново экспортировать ссылку и импортировать её в клиент. Старая ссылка уже может не работать.
+Если после любых изменений нажимал `Get New Cert`, менял `Short IDs`, `SNI`, `Target` или `Seed`, нужно заново экспортировать ссылку и импортировать её в клиент.
 
 ---
 
-## 9. Клиент для Windows
+## 13. Клиент для Windows
 
 Рекомендуемый клиент:
 
@@ -531,7 +606,7 @@ https://ifconfig.me
 
 ---
 
-## 10. Клиент для Android
+## 14. Клиент для Android
 
 Рекомендуемый клиент:
 
@@ -551,7 +626,7 @@ GitHub → 2dust/v2rayNG → Releases
 v2rayNG_*_arm64-v8a.apk
 ```
 
-Если не уверены в архитектуре телефона:
+Если не уверен в архитектуре телефона:
 
 ```text
 v2rayNG_*_universal.apk
@@ -573,7 +648,7 @@ v2rayNG_*_universal.apk
 
 ---
 
-## 11. XHTTP через CDN Cloudflare
+## 15. XHTTP через CDN Cloudflare
 
 Это продвинутый вариант. Его стоит делать только если простой XHTTP без CDN уже понятен.
 
@@ -621,7 +696,7 @@ SNI: ваш домен/поддомен
 
 ---
 
-## 12. Полезные команды управления
+## 16. Полезные команды управления
 
 Статус службы:
 
@@ -656,19 +731,18 @@ x-ui
 Логи:
 
 ```bash
-x-ui log
 journalctl -u x-ui -n 100 --no-pager
 ```
 
 Проверить порты:
 
 ```bash
-ss -tulpn | grep -E '443|17701|80'
+ss -tulpn | grep -E '443|58666|60870|2096|x-ui|xray'
 ```
 
 ---
 
-## 13. Удаление 3x-ui
+## 17. Удаление 3x-ui
 
 Обычно достаточно:
 
@@ -699,17 +773,23 @@ rm -rf ~/.acme.sh/IP_СЕРВЕРА_ecc
 Закрывать только те порты, которые точно больше не нужны:
 
 ```bash
-ufw delete allow 17701/tcp
+ufw delete allow 58666/tcp
+ufw delete allow 60870/tcp
 ufw delete allow 443/tcp
 ufw delete allow 80/tcp
 ufw status
 ```
 
-`22/tcp` не удалять, если через него работает SSH. Если на сервере стоит AmneziaWG, не удаляйте его UDP-порты, например `51820/udp` или `443/udp`.
+`22/tcp` не удалять, если через него работает SSH. Если на сервере стоит AmneziaWG, не удаляй его порты:
+
+```text
+51820/udp
+51821/tcp
+```
 
 ---
 
-## 14. Короткий итог
+## 18. Короткий итог
 
 Простой XHTTP без CDN:
 
@@ -720,10 +800,17 @@ Transport: XHTTP
 Security: Reality
 Flow: пусто
 uTLS: chrome
-Target/SNI: www.apple.com
+Target/SNI: www.sony.com или другой доступный HTTPS-сайт
 Get New Cert: да
-Get New Seed: по инструкции репозитория да, но при проблемах можно тестировать без seed
+Get New Seed: да, если следуем репозиторию
 Sniffing: ON
+```
+
+Порт панели:
+
+```text
+Лучше задать вручную, например 58666.
+Если выбрал random, после установки открыть именно сгенерированный порт.
 ```
 
 Клиенты:
@@ -741,6 +828,7 @@ laptop
 phone
 tablet
 ```
+
 <img width="621" height="1919" alt="image" src="https://github.com/user-attachments/assets/fa9ebb2e-7ca4-469e-ae5b-b21f12c0e848" />
 <img width="619" height="1429" alt="image" src="https://github.com/user-attachments/assets/45db3e54-67fa-4d74-a087-83c05806dd9a" />
 
