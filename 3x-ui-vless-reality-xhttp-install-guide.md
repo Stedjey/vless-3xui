@@ -1,3 +1,13 @@
+═══════════════════════════════════════════
+     Panel Installation Complete!
+═══════════════════════════════════════════
+Username:    smCHnAyh7i
+Password:    5IdNlAoLkk
+Port:        60870
+WebBasePath: AyHKwEGM4F2VYcCEMx
+Access URL:  https://31.59.114.59:60870/AyHKwEGM4F2VYcCEMx
+═══════════════════════════════════════════
+
 # Установка 3x-ui + VLESS Reality + XHTTP на Ubuntu-сервер
 
 Инструкция описывает установку **3x-ui** и создание подключения **VLESS + Reality + XHTTP** — именно подхода из репозитория `ServerTechnologies/3x-ui-with-xhttp`.
