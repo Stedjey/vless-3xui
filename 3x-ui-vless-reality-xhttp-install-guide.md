@@ -90,6 +90,9 @@ apt upgrade -y
 ```
 ⚠️
 
+```bash
+apt update
+```
 Установить 3x-ui:
 
 ```bash
