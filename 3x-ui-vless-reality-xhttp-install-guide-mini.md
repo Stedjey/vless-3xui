@@ -178,3 +178,7 @@ GitHub → 2dust/v2rayNG → Releases
 или
 + → Import config from clipboard
 ```
+<img width="621" height="1919" alt="image" src="https://github.com/user-attachments/assets/c0bcb95c-901e-4cd8-98fa-c41ab9718921" />
+<img width="619" height="1429" alt="image" src="https://github.com/user-attachments/assets/9690067b-07a3-4ee7-954e-55331a245261" />
+
+
