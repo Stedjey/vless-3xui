@@ -73,7 +73,8 @@ DEBIAN_FRONTEND=noninteractive apt install -y curl wget sudo ufw nano openssl ca
 
 Эта команда установки базовых пакетов **желательна, но не всегда обязательна**: установочный скрипт 3x-ui обычно сам доставляет часть зависимостей. Но лучше выполнить её заранее, чтобы точно были `curl`, `openssl`, `socat`, `cron`, `ca-certificates` и `ufw`.
 
-⚠️ **НЕ НУЖНО делать полный `apt upgrade -y` на рабочем сервере без необходимости.** Особенно если на сервере уже есть SSH-настройки, AmneziaWG или другие службы. `apt upgrade` может задавать вопросы по конфигам вроде `/etc/ssh/sshd_config` или `/etc/cloud/cloud.cfg`.
+⚠️ 
+**НЕ НУЖНО делать полный `apt upgrade -y` на рабочем сервере без необходимости.** Особенно если на сервере уже есть SSH-настройки, AmneziaWG или другие службы. `apt upgrade` может задавать вопросы по конфигам вроде `/etc/ssh/sshd_config` или `/etc/cloud/cloud.cfg`.
 
 Команды ниже выполнять **только если есть проблема с apt/dpkg**: например, `dpkg was interrupted`, broken dependencies, зависшее/прерванное обновление.
 
@@ -87,6 +88,7 @@ apt install -f -y
 ```bash
 apt upgrade -y
 ```
+⚠️
 
 Установить 3x-ui:
 
