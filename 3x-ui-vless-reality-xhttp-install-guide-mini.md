@@ -1,44 +1,17 @@
 # Мини-инструкция: 3x-ui + VLESS Reality XHTTP
 
-## 1. Установка 3x-ui
+## 1. Подготовка
 
 ```bash
 apt update
 ```
 
-## 2. Порты
-
-Если UFW активен и на сервере есть AmneziaWG:
+## 2. Открыть базовые порты
 
 ```bash
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw allow 51820/udp
-ufw allow 51821/tcp
-ufw status
-```
-
-Если AmneziaWG нет:
-
-```bash
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw status
-```
-
-Порт панели 3x-ui можно выбрать двумя способами:
-
-```text
-Вариант 1: задать вручную, например 58666 → заранее открыть 58666/tcp
-Вариант 2: нажать Enter / выбрать random → после установки открыть сгенерированный порт из финального вывода
-```
-
-Если задаёшь порт панели вручную:
-
-```bash
-ufw allow 58666/tcp
 ufw status
 ```
 
@@ -48,17 +21,39 @@ ufw status
 bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
 ```
 
-Ответы в установщике, если хочешь свой порт панели:
+Порт панели можно выбрать двумя способами.
+
+Вариант 1 — задать вручную:
 
 ```text
 Would you like to customize the Panel Port settings? [y/n]: y
 Please set up the panel port: 58666
 ```
 
-Ответы в установщике, если хочешь случайный порт панели:
+Тогда открыть порт панели:
+
+```bash
+ufw allow 58666/tcp
+ufw status
+```
+
+Вариант 2 — случайный порт:
 
 ```text
 Would you like to customize the Panel Port settings? [y/n]: n
+```
+
+После установки взять порт из финального вывода:
+
+```text
+Port: XXXXX
+```
+
+И открыть его:
+
+```bash
+ufw allow XXXXX/tcp
+ufw status
 ```
 
 SSL:
@@ -74,7 +69,7 @@ Port to use for ACME HTTP-01 listener (default 80): Enter
 ```bash
 x-ui status
 systemctl status x-ui --no-pager
-ss -tulpn | grep -E '443|80|51820|51821|58666'
+ss -tulpn | grep -E '443|80|58666|XXXXX'
 ```
 
 Открыть панель:
