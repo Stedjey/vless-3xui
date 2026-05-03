@@ -64,16 +64,33 @@ ss -tulpn
 ufw status numbered || true
 ```
 
-Минимальная подготовка перед установкой:
+
+## 1. Минимальная установка
+
+Минимально для установки 3x-ui обычно достаточно:
+
+```bash
+apt update
+bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
+```
+
+`apt update` желательно оставить: он не обновляет систему, а только обновляет список пакетов.
+
+---
+
+## 2. Желательная подготовка
+
+Эта команда **желательна, но не всегда обязательна**: установочный скрипт 3x-ui обычно сам доставляет часть зависимостей. Но лучше выполнить её заранее, чтобы точно были `curl`, `openssl`, `socat`, `cron`, `ca-certificates` и `ufw`.
 
 ```bash
 apt update
 DEBIAN_FRONTEND=noninteractive apt install -y curl wget sudo ufw nano openssl ca-certificates socat cron tar tzdata
 ```
 
-Эта команда установки базовых пакетов **желательна, но не всегда обязательна**: установочный скрипт 3x-ui обычно сам доставляет часть зависимостей. Но лучше выполнить её заранее, чтобы точно были `curl`, `openssl`, `socat`, `cron`, `ca-certificates` и `ufw`.
+---
 
-⚠️ 
+## ⚠️ Необязательный аварийный блок
+
 **НЕ НУЖНО делать полный `apt upgrade -y` на рабочем сервере без необходимости.** Особенно если на сервере уже есть SSH-настройки, AmneziaWG или другие службы. `apt upgrade` может задавать вопросы по конфигам вроде `/etc/ssh/sshd_config` или `/etc/cloud/cloud.cfg`.
 
 Команды ниже выполнять **только если есть проблема с apt/dpkg**: например, `dpkg was interrupted`, broken dependencies, зависшее/прерванное обновление.
@@ -83,20 +100,10 @@ dpkg --configure -a
 apt install -f -y
 ```
 
-Полное обновление системы — только осознанно, когда действительно хочешь обновить пакеты ОС:
+Полное обновление системы выполнять только осознанно, когда действительно хочешь обновить пакеты ОС:
 
 ```bash
 apt upgrade -y
-```
-⚠️
-
-```bash
-apt update
-```
-Установить 3x-ui:
-
-```bash
-bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
 ```
 
 Во время установки:
