@@ -729,3 +729,6 @@ laptop
 phone
 tablet
 ```
+<img width="621" height="1919" alt="image" src="https://github.com/user-attachments/assets/fa9ebb2e-7ca4-469e-ae5b-b21f12c0e848" />
+<img width="619" height="1429" alt="image" src="https://github.com/user-attachments/assets/45db3e54-67fa-4d74-a087-83c05806dd9a" />
+
